@@ -2,8 +2,9 @@ import json
 from pydantic import BaseModel, Field, ValidationError
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Config.llm_config import fast_llm
 from Utils.Logger import get_logger
 from Utils.helpers import format_chat_history, get_short_term_memory
@@ -12,34 +13,40 @@ logger = get_logger("Primary Classifier")
 
 class TriageDecision(BaseModel):
     is_workflow_required: bool = Field(
-        description="True if the request needs banking tools or complex logic. False for simple greetings or chit-chat."
+        description="True if the request needs supply chain tools, news fetching, or complex logic. False for simple greetings."
     )
     direct_response: str = Field(
         description="If workflow is not required, provide the direct conversational response here.", 
         default="How can I help you?"
     )
 
-TRIAGE_SYSTEM_PROMPT = """You are the first line of defense for a secure Banking Assistant.
-Your job is to decide if the user's request requires the full banking workflow (tools, orchestration) or if it can be answered directly (e.g., greetings, pleasantries).
+TRIAGE_SYSTEM_PROMPT = """You are the first line of defense for a secure Supply Chain & Logistics Assistant.
+Your job is to decide if the user's request requires the full orchestration workflow (tools, database checks) or if it can be answered directly.
+
+System Context:
+The current active user ID is: '{user_id}'. 
+- If this ID is a number, the user is a Driver. 
+- If this ID is 'admin' or 'system_admin', the user is the Administrator.
+NEVER ask the user for their ID or role. Use this system-provided ID for all internal context and tool calls.
 
 User Profile / Long-Term Memory:
 {user_memories}
 
 Rules:
-1. If the user greets you, use their name or profile details from Long-Term Memory to personalize the 'direct_response'.
-2. If the user asks about banking data, policies, or transactions, set 'is_workflow_required' to True.
-3. Do not attempt to answer banking questions directly. Always route them to the workflow.
+1. If the user greets you, use their ID or profile details to personalize the 'direct_response'.
+2. If the user asks about trips, weather, disruptions, or route details, set 'is_workflow_required' to True.
+3. Do not attempt to answer logistics questions directly. Always route them to the workflow.
 4. Output STRICTLY valid JSON with no conversational text before or after.
-Example format:
-{{"is_workflow_required": false, "direct_response": "Hello Rathan, how can I help you today?"}}
 """
 
-def triage_router(state: BankingState):
+def triage_router(state: SupplyChainState, config: RunnableConfig):
     question = state.get("question", "")
     memories = state.get("memories", "No known facts.")
     
-    logger.info(f"🗣️ USER REQ : {question}")
-    logger.info("--- 🛡️ RUNNING INTENT ROUTER & GATEKEEPER CHECK ---")
+    # Extract the user/driver ID passed from server.py config
+    user_id = config.get("configurable", {}).get("user_id", "Unknown")
+    
+    logger.info(f"🗣️ USER REQ : {question} | User ID: {user_id}")
 
     if not question:
         return {
@@ -59,17 +66,15 @@ def triage_router(state: BankingState):
     chain = prompt | fast_llm
 
     try:
-        # 🌟 FIX 2: Use standard .invoke() instead of await .ainvoke()
         response = chain.invoke({
             "question": question,
             "user_memories": memories,
-            "chat_history": chat_history
+            "chat_history": chat_history,
+            "user_id": user_id
         })
         
         raw_content = response.content.strip()
-        logger.info(f"Raw LLM Response: {raw_content}")
 
-        # Clean markdown formatting if present
         if raw_content.startswith("```"):
             lines = raw_content.splitlines()
             if lines[0].startswith("```"):
@@ -80,8 +85,6 @@ def triage_router(state: BankingState):
 
         data = json.loads(raw_content)
         decision = TriageDecision.model_validate(data)
-        
-        logger.info(f"✅ Successfully validated model: {decision}")
 
         if decision.is_workflow_required:
             return {
@@ -96,10 +99,8 @@ def triage_router(state: BankingState):
             "worker_responses": [],
         }
 
-    except (json.JSONDecodeError, ValidationError, Exception) as e:
+    except Exception as e:
         logger.error(f"❌ Primary classifier parsing/validation failed: {e}")
-        logger.warning("Failsafe triggered: Defaulting to Action pipeline.")
-
         return {
             "requires_workflow": True,
             "worker_responses": [],

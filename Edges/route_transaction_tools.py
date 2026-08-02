@@ -1,9 +1,9 @@
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 logger = get_logger("ROUTE_TRANSACTION_TOOLS")
 
-def route_transaction_tools(state: BankingState):
+def route_transaction_tools(state: SupplyChainState):
     """Routes tool calls to either the safe zone or the sensitive (paused) zone."""
     last_message = state["messages"][-1]
     

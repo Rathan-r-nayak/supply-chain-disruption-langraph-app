@@ -2,14 +2,14 @@
 # from langchain_core.output_parsers import JsonOutputParser
 # from langchain_core.prompts import ChatPromptTemplate
 
-# from State.banking_state import BankingState
+# from State.banking_state import SupplyChainState
 # from Config.llm_config import fast_llm
 # from Utils.Logger import get_logger
 
 # logger = get_logger("KNOWLEDGE_EVAL_NODE")
 
 
-# def evaluate_node(state: BankingState):
+# def evaluate_node(state: SupplyChainState):
 #     logger.info("--- 🔍 EVALUATING KNOWLEDGE RETRIEVAL ---")
 
 #     question = state.get("question", "")
@@ -93,7 +93,7 @@
 #         }
 
 
-# def rewrite_node(state: BankingState):
+# def rewrite_node(state: SupplyChainState):
 #     logger.info("--- ✍️ REWRITING KNOWLEDGE QUERY ---")
 
 #     question = state.get("question", "")

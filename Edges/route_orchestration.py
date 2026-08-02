@@ -1,7 +1,7 @@
 from langgraph.constants import Send
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 
-def orchestrator_router(state: BankingState):
+def orchestrator_router(state: SupplyChainState):
     """
     If complete, route to aggregator.
     If tasks exist, map them to parallel workers using the Send API.

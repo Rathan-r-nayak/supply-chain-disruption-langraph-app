@@ -194,7 +194,7 @@
 #                         "question": message or "",
 #                         "worker_responses": [],
 #                         "messages": [HumanMessage(content=message)] if message else [],
-#                         "image_path": image_path  # 🌟 2. Pass the image path into your BankingState
+#                         "image_path": image_path  # 🌟 2. Pass the image path into your SupplyChainState
 #                     }
 
 #                 # Stream the messages normally

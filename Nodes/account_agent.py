@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import ToolNode, tools_condition
 
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 from Config.llm_config import BASE_URL, API_KEY
 
@@ -37,7 +37,7 @@ def get_account_agent_nodes(all_mcp_tools: list[Any]):
     account_tools = [t for t in all_mcp_tools if t.name in ACCOUNT_TOOL_NAMES]
     logger.info(f"💳 Account Agent initialized with {len(account_tools)} tools.")
 
-    async def account_agent_node(state: BankingState):
+    async def account_agent_node(state: SupplyChainState):
         logger.info("--- 💳 RUNNING ACCOUNT AGENT ---")
 
         # Instantiate fresh LLM & HTTP client inside the active async event loop

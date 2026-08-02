@@ -1,8 +1,8 @@
 # Nodes/rag_formatter_node.py
 from langchain_core.messages import ToolMessage
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 
-def rag_format_response_node(state: BankingState):
+def rag_format_response_node(state: SupplyChainState):
     """Packages the verified RAG answer as a tool response."""
     messages = state.get("messages", [])
     

@@ -1,10 +1,10 @@
 from langgraph.graph import END
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 logger = get_logger("Primary Classifier edge")
 
-def route_triage(state: BankingState):
+def route_triage(state: SupplyChainState):
     """
     Reads the state output from the triage_router.
     Routes to the orchestrator if a workflow is needed, otherwise ends the graph.

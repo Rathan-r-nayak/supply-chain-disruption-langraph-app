@@ -20,6 +20,7 @@ def format_timestamp(iso_string: str) -> str:
         return dt.strftime("%b %d, %Y · %-I:%M %p")
     except (ValueError, TypeError):
         return iso_string
+    
 
 # =============================================================================
 # API CLIENT HELPERS
@@ -78,6 +79,7 @@ def api_fetch_documents() -> list[dict]:
         return []
 
 # 🌟 UPDATED: Now supports multipart/form-data for image uploads
+# 🌟 UPDATED: Preserves spaces for streaming tokens!
 def stream_chat(thread_id: str, user_id: str, message: str | None = None, action: str | None = None, image_bytes: bytes | None = None, image_name: str | None = None):
     data = {"thread_id": thread_id, "user_id": user_id}
     if message:
@@ -99,10 +101,19 @@ def stream_chat(thread_id: str, user_id: str, message: str | None = None, action
                 if raw_line.startswith("event:"):
                     event_type = raw_line[len("event:"):].strip()
                 elif raw_line.startswith("data:"):
-                    data_str = raw_line[len("data:"):].strip()
+                    
+                    # 🌟 THE FIX: Slice off "data:" safely.
+                    data_str = raw_line[len("data:"):]
+                    
+                    # SSE protocol usually puts one space after the colon (e.g., "data: Hello").
+                    # If that single protocol space exists, remove it, but keep all other spaces!
+                    if data_str.startswith(" "):
+                        data_str = data_str[1:]
+                        
                     data_str = data_str.replace("\\n", "\n") 
                     yield event_type, data_str
                     event_type = None
+                    
     except requests.exceptions.RequestException as e:
         yield "error", f"Connection error: {e}"
 
@@ -222,9 +233,12 @@ def render_customer_sidebar():
             for t in st.session_state.threads_cache:
                 is_active = t["thread_id"] == st.session_state.current_thread_id
                 if is_active:
+                    # 🌟 ENHANCED HIGHLIGHT: Added a left accent border and cleaner padding
                     st.markdown(
                         f'<div style="background-color: var(--secondary-background-color); '
-                        f'border-radius: 6px; padding: 0.4rem 0.6rem; font-weight: 600;">'
+                        f'border-left: 4px solid #ff4b4b; '
+                        f'border-radius: 4px; padding: 0.5rem 0.75rem; font-weight: 600; '
+                        f'margin-bottom: 0.25rem; font-size: 0.9rem;">'
                         f'{t["title"]}</div>',
                         unsafe_allow_html=True,
                     )

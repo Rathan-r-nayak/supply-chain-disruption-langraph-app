@@ -3,7 +3,7 @@
 # from langchain_core.messages import SystemMessage
 # from langgraph.prebuilt import ToolNode, tools_condition
 
-# from State.banking_state import BankingState
+# from State.banking_state import SupplyChainState
 # from Config.llm_config import fast_llm
 # from Utils.Logger import get_logger
 
@@ -45,7 +45,7 @@
 
 #     llm_with_tools = fast_llm.bind_tools(knowledge_tools)
 
-#     def knowledge_agent_node(state: BankingState):
+#     def knowledge_agent_node(state: SupplyChainState):
 #         logger.info("--- 📚 RUNNING KNOWLEDGE AGENT ---")
 
 #         messages = state.get("messages", [])

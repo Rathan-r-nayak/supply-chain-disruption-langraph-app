@@ -43,20 +43,26 @@ def check_generation_quality(state: RagState):
     documents = state.get("documents", {})
     retries = state.get("knowledge_retries", 0)
 
-    # 🛑 Infinite Loop Safeguard: If we've retried too many times, just accept the answer
+    # 🛑 Infinite Loop Safeguard
     if retries > 3:
         logger.warning("⚠️ Max retries reached. Forcing 'useful' to break loop.")
         return "useful"
 
-    # Format the structured JSON documents into text for the grader LLM
-    vector_facts = documents.get("vector_facts", [])
-    graph_facts = documents.get("graph_facts_used", [])
-    
+    # 🌟 Web search bypass check
+    if isinstance(documents, str):
+        logger.info("🌐 Web search detected. Bypassing quality checks and accepting answer.")
+        return "useful"
+
+    # Format dictionary contexts (Vector + Graph) for the grader LLM
     docs_text = ""
-    for idx, fact in enumerate(vector_facts):
-        docs_text += f"[Chunk {idx}]: {fact.get('content', '')}\n"
-    for idx, fact in enumerate(graph_facts):
-        docs_text += f"[Graph Fact {idx}]: {fact}\n"
+    if isinstance(documents, dict):
+        vector_facts = documents.get("vector_facts", [])
+        graph_facts = documents.get("graph_facts_used", [])
+        
+        for idx, fact in enumerate(vector_facts):
+            docs_text += f"[Chunk {idx}]: {fact.get('content', '')}\n"
+        for idx, fact in enumerate(graph_facts):
+            docs_text += f"[Graph Fact {idx}]: {fact}\n"
 
     # ---------------------------------------------------------
     # PHASE A: Hallucination / Groundedness Check

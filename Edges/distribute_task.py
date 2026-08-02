@@ -1,10 +1,10 @@
 from langgraph.constants import Send
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 logger = get_logger("DISTRIBUTE_TASK")
 
-def distribute_tasks(state: BankingState):
+def distribute_tasks(state: SupplyChainState):
     """
     Reads the tasks from the state and spins up a worker node for each one.
     """

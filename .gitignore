@@ -2,3 +2,18 @@ __pycache__
 .venv
 .env
 *.lock
+# Python / Virtual Environments
+*.pyc
+
+# Databases & Checkpoints
+*.db
+*.db-wal
+*.db-shm
+data/chroma_db/
+data/graph_store.db
+
+# Caches & OS Files
+.DS_Store
+TiktokenCache/
+uploaded_docs/
+metadata/

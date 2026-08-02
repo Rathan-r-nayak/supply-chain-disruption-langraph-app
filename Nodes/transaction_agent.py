@@ -2,7 +2,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import END
 from Config.llm_config import fast_llm
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 logger = get_logger("TRANSACTION_AGENT")
@@ -17,7 +17,7 @@ def get_transaction_agent_nodes(all_mcp_tools: list):
     # 2. Bind ALL tools to the LLM so it knows they exist
     llm_with_tools = fast_llm.bind_tools(safe_tools + sensitive_tools)
     
-    def transaction_agent_node(state: BankingState):
+    def transaction_agent_node(state: SupplyChainState):
         logger.info("--- 💸 RUNNING TRANSACTION AGENT ---")
         try:
             response = llm_with_tools.invoke(state["messages"])

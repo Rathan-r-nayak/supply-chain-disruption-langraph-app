@@ -1,11 +1,11 @@
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 
 logger = get_logger("KNOWLEDGE_EVAL_EDGE")
 
 
-def check_relevance(state: BankingState):
+def check_relevance(state: SupplyChainState):
     score = state.get("relevance_score", "yes")
     retries = state.get("knowledge_retries", 0)
     logger.info(f"🔍 CHECKING RELEVANCE EDGE: Score = '{score}', Retries = {retries}")

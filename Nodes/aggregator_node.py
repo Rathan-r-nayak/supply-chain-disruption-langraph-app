@@ -1,4 +1,4 @@
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate
 from Config.llm_config import fast_llm
@@ -17,7 +17,7 @@ Rules:
 3. If any worker reported an error or failed to find information, politely apologize and explain what specific information could not be retrieved.
 """
 
-def aggregator_node(state: BankingState):
+def aggregator_node(state: SupplyChainState):
     question = state.get("question", "")
     worker_responses_list = state.get("worker_responses", [])
     

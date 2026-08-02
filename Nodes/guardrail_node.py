@@ -1,11 +1,11 @@
 # Nodes/guardrail_node.py
 import re
-from State.banking_state import BankingState
+from State.supply_chain_state import SupplyChainState
 from Utils.Logger import get_logger
 
 logger = get_logger("GUARDRAIL")
 
-def guardrail_node(state: BankingState):
+def guardrail_node(state: SupplyChainState):
     """
     Acts as a zero-trust entry point. 
     Masks PII and blocks prompt injections before LLM processing.
