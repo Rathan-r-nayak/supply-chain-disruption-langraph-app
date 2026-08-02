@@ -4,7 +4,7 @@ from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 
 # 🌟 FIX 1: Import the correct Subgraph State
 from State.rag_state import RagState 
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("WEB_SEARCH")
 

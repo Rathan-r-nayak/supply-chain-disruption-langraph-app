@@ -30,8 +30,8 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
 from Config.llm_config import embedding_model
-from Config.settings import settings
-from Utils.Logger import get_logger
+from Config.rag_settings import settings
+from Utils.logger import get_logger
 
 logger = get_logger("VECTORE_STORE")
 

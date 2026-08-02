@@ -34,7 +34,7 @@ Rules:
 #     state_modifier=WORKER_SYSTEM_PROMPT
 # )
 
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("WORKER_NODE")
 

@@ -10,7 +10,7 @@ from langgraph.store.base import BaseStore
 
 from State.supply_chain_state import SupplyChainState
 from Config.llm_config import fast_llm
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("REMEMBER_NODE")
 

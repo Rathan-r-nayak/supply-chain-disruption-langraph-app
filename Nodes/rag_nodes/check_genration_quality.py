@@ -2,7 +2,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from Config.llm_config import fast_llm
 from State.rag_state import RagState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("SELF_RAG_REFLECTION")
 

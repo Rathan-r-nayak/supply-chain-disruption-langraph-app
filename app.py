@@ -13,7 +13,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 # Imports from your project
-from Utils.HistoryLoaders import load_chat_history
+from Utils.history_loaders import load_chat_history
 from main import build_graph
 
 # Load environment variables (for LangSmith)

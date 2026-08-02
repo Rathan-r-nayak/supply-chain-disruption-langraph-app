@@ -3,7 +3,7 @@ from langchain_core.messages import ToolMessage
 from Config.llm_config import primary_llm
 from State.supply_chain_state import SupplyChainState # Ensure proper import
 
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("GENERATE_NODE")
 

@@ -3,7 +3,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.graph import END
 from Config.llm_config import fast_llm
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("TRANSACTION_AGENT")
 

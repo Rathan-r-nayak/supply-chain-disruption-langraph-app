@@ -1,7 +1,7 @@
 from langchain_classic.prompts import ChatPromptTemplate
 from Config.llm_config import fast_llm
 from State.rag_state import RagState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 # Import your local DB connections (e.g., Neo4j, Milvus/FAISS/Chroma)
 # from DB.vector_store import get_vector_store
 # from DB.graph_store import get_graph_store

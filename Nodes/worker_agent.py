@@ -5,7 +5,7 @@ from langchain_core.runnables import RunnableConfig
 
 from Schema.task import Task
 from State.supply_chain_state import WorkerState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Config.llm_config import BASE_URL, API_KEY, client
 
 logger = get_logger("WORKER_AGENT")

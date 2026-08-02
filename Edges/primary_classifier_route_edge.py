@@ -1,6 +1,6 @@
 from langgraph.graph import END
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("Primary Classifier edge")
 

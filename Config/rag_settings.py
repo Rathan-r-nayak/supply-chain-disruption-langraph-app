@@ -14,11 +14,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # --- Chroma (vector store) ---
-    chroma_persist_dir: str = "./data/chroma_db"
+    chroma_persist_dir: str = "./data/rag/chroma_db"
     chroma_collection_name: str = "documents"
 
     # --- Graph store: NetworkX (in-memory) + SQLite (persistence) ---
-    graph_db_path: str = "./data/graph_store.db"
+    graph_db_path: str = "./data/rag/graph_store.db"
 
     # --- Chunking ---
     chunk_size: int = 800

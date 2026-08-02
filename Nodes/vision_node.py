@@ -2,7 +2,7 @@ import mimetypes
 import base64
 from langchain_core.messages import HumanMessage
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Config.llm_config import primary_llm
 
 logger = get_logger("VISION_NODE")

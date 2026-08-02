@@ -13,7 +13,7 @@ from rag.ingestion.chunking import add_contextual_prefix, split_document
 from rag.ingestion.graph_extraction import extract_and_store_graph
 from rag.ingestion.loaders import load_document
 from rag.retrieval.vector_store import get_vector_store
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger(__name__)
 

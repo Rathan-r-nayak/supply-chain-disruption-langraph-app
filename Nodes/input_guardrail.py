@@ -2,7 +2,7 @@ import re
 import json
 from langchain_core.prompts import ChatPromptTemplate
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from langchain_core.messages import AIMessage
 
 from Config.llm_config import fast_llm 

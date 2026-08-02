@@ -3,7 +3,7 @@ from langchain_chroma import Chroma
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.documents import Document
 from Config.llm_config import embedding_model
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("VECTOR_STORE")
 

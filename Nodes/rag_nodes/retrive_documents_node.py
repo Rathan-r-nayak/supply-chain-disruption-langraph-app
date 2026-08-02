@@ -5,7 +5,7 @@ from typing import List
 from rag.retrieval.graph_store import graph_search
 from rag.retrieval.vector_store import get_vector_store
 from State.rag_state import HybridDocuments, RagState, VectorFact
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("RETRIEVE_NODE")
 

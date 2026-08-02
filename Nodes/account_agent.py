@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Config.llm_config import BASE_URL, API_KEY
 
 logger = get_logger("ACCOUNT_AGENT")

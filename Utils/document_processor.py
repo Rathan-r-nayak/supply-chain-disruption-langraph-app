@@ -1,8 +1,8 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from Utils.VectorStore import add_documents_to_store
-from Utils.Logger import get_logger
+from Utils.vector_store import add_documents_to_store
+from Utils.logger import get_logger
 
 logger = get_logger("DOCUMENT_PROCESSOR")
 

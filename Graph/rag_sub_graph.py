@@ -6,7 +6,7 @@ from Nodes.rag_nodes.evaluate_node import evaluate_node
 from Nodes.rag_nodes.rewrite_query_node import rewrite_node
 from Nodes.rag_nodes.generate_node import generate_node
 from State.rag_state import RagState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Nodes.rag_nodes.check_genration_quality import check_generation_quality
 
 # 🌟 Import your new Self-RAG router

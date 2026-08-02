@@ -21,8 +21,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from Config.llm_config import fast_llm
-from Config.settings import settings
-from Utils.Logger import get_logger
+from Config.rag_settings import settings
+from Utils.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,10 +1,13 @@
 import sqlite3
 import json
+import os
 
 class SqliteKeyValueStore:
     """A lightweight persistent LTM store using a local SQLite file."""
     
-    def __init__(self, db_path="banking_ltm.db"):
+    def __init__(self, db_path="data/long_term_memory.db"):
+        # Ensure the data directory exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
         # Connects to (or creates) the local SQLite file
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self._create_table()
@@ -46,6 +49,5 @@ class SqliteKeyValueStore:
 
 # -------------------------------------------------------------------------
 # INITIALIZATION
-# This is the exact variable that app.py is trying to import!
 # -------------------------------------------------------------------------
-ltm_store = SqliteKeyValueStore("banking_ltm.db")
+ltm_store = SqliteKeyValueStore("data/long_term_memory.db")

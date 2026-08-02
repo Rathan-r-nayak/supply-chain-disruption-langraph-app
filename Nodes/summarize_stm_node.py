@@ -2,7 +2,7 @@ from langchain_core.messages import SystemMessage, RemoveMessage
 from langchain_core.prompts import ChatPromptTemplate
 from State.supply_chain_state import SupplyChainState
 from Config.llm_config import fast_llm
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("SUMMARIZE_NODE")
 

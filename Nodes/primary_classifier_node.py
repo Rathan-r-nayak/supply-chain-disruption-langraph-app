@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 
 from State.supply_chain_state import SupplyChainState
 from Config.llm_config import fast_llm
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Utils.helpers import format_chat_history, get_short_term_memory
 
 logger = get_logger("Primary Classifier")

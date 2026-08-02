@@ -1,5 +1,5 @@
 # Utils/HistoryLoader.py
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("HISTORY_LOADER")
 
@@ -22,7 +22,7 @@ def load_chat_history(app_instance, thread_id: str):
             # (meaning there are no pending 'next' nodes to execute)
             if not snapshot.next:
                 val = snapshot.values
-                
+            
                 # Match these exactly to your app.invoke() and state schema keys
                 q = val.get("question")
                 a = val.get("generation")

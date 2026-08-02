@@ -31,6 +31,7 @@ class SupplyChainState(TypedDict, total=False):
 
     tasks: list[Task]
     worker_responses: Annotated[list[str], merge_lists]
+    is_cache_hit: bool
 
     is_sufficient: bool
     relevance_score: str

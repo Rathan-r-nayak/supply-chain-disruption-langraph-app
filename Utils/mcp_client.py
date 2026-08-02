@@ -1,7 +1,7 @@
 import os
 import httpx
 import streamlit as st
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 import asyncio
 from mcp.client.sse import sse_client
 from langchain_mcp_adapters.tools import load_mcp_tools

@@ -1,4 +1,4 @@
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("ROUTE_WORKER_TOOLS")
 

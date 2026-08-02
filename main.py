@@ -2,6 +2,7 @@ import os
 from langgraph.graph import StateGraph, START, END
 
 # --- State Imports ---
+from Nodes.semantic_cache_nodes import check_semantic_cache_node, save_semantic_cache_node
 from Nodes.summarize_stm_node import summarize_conversation_node
 from State.supply_chain_state import SupplyChainState
 
@@ -23,15 +24,24 @@ from Edges.route_orchestration import orchestrator_router
 
 os.environ["LANGGRAPH_STRICT_MSGPACK"] = "false"
 
+# 🌟 NEW ROUTING FUNCTION FOR THE CACHE
+def route_after_cache(state: SupplyChainState):
+    """If cache hits, skip straight to the end formatting. If miss, run the workflow."""
+    if state.get("is_cache_hit", False):
+        return "output_guardrail"
+    return "triage_router"
+
+
 def build_graph(all_mcp_tools, checkpointer=None, ltm_store=None):
     """
     Assembles and compiles the map-reduce supply chain agent.
     """
     worker_subgraph = get_worker_subgraph(all_mcp_tools)
-
     workflow = StateGraph(SupplyChainState)
 
     # 1. Add Nodes
+    workflow.add_node("check_semantic_cache", check_semantic_cache_node)
+    workflow.add_node("save_semantic_cache", save_semantic_cache_node)
     workflow.add_node("recall_node", recall_node)
     workflow.add_node("vision_node", vision_node)
     workflow.add_node("input_guardrail", input_guardrail_node)
@@ -43,21 +53,32 @@ def build_graph(all_mcp_tools, checkpointer=None, ltm_store=None):
     workflow.add_node("remember_node", remember_node)
     workflow.add_node("summarize_conversation_node", summarize_conversation_node)
     
-    # 2. Add Edges & Conditional Routing
+    # 2. Add Edges (Linear startup)
     workflow.add_edge(START, "recall_node")
     workflow.add_edge("recall_node", "vision_node")
     workflow.add_edge("vision_node", "input_guardrail")
-    workflow.add_edge("recall_node", "input_guardrail")
 
+    # 3. Guardrail -> Cache Checker
     workflow.add_conditional_edges(
         "input_guardrail",
-        guardrail_edge,
+        guardrail_edge, 
         {
-            "triage_router": "triage_router",
+            "check_semantic_cache": "check_semantic_cache", 
             END: END
         }
     )
     
+    # 4. Cache Checker -> Skip or Execute
+    workflow.add_conditional_edges(
+        "check_semantic_cache",
+        route_after_cache,
+        {
+            "output_guardrail": "output_guardrail", # Cache Hit! Jump to end.
+            "triage_router": "triage_router"        # Cache Miss! Do the work.
+        }
+    )
+    
+    # 5. Standard Workflow Routing
     workflow.add_conditional_edges(
         "triage_router",
         route_triage,
@@ -78,7 +99,10 @@ def build_graph(all_mcp_tools, checkpointer=None, ltm_store=None):
 
     workflow.add_edge("worker_subgraph", "orchestrator")
     workflow.add_edge("aggregator", "output_guardrail")
-    workflow.add_edge("output_guardrail", "remember_node")
+    
+    # 6. Finalizing Edges (Save to cache, memory, summarize, exit)
+    workflow.add_edge("output_guardrail", "save_semantic_cache")
+    workflow.add_edge("save_semantic_cache", "remember_node")
     workflow.add_edge("remember_node", "summarize_conversation_node")
     workflow.add_edge("summarize_conversation_node", END)
 

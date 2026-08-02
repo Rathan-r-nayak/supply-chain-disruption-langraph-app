@@ -1,6 +1,6 @@
 from langgraph.constants import Send
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("DISTRIBUTE_TASK")
 

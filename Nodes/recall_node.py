@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.base import BaseStore
 from State.supply_chain_state import SupplyChainState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("RECALL_NODE")
 

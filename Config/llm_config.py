@@ -6,6 +6,8 @@ from urllib3.exceptions import InsecureRequestWarning
 from langchain_openai import AzureOpenAIEmbeddings, ChatOpenAI
 from dotenv import load_dotenv
 
+from cache_config.semantic_cache import LocalSemanticCache
+
 load_dotenv(override=True)
 
 # Retrieve the key from environment variables

@@ -28,7 +28,7 @@ from langchain_core.documents import Document
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 
 from Config.llm_config import fast_llm
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from rag.retrieval.graph_store import get_graph_store
 
 logger = get_logger(__name__)

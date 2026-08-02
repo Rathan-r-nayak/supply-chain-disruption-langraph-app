@@ -1,6 +1,6 @@
 from langchain_core.messages import AIMessage
 from State.rag_state import RagState
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 
 logger = get_logger("RAG_SUBGRAPH")
 
