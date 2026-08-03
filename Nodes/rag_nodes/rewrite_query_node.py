@@ -14,7 +14,7 @@ def rewrite_node(state: RagState):
     retries = state.get("knowledge_retries", 0)
 
     rewrite_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert at optimizing search queries for hybrid vector/graph databases. Output a refined, highly specific search query as plain text."),
+        ("system", "You are an expert at optimizing search queries for hybrid vector/graph databases. Output a refined, highly specific search query as plain text without changing the meaning of the original query."),
         ("human", "Original question: {question}")
     ])
 

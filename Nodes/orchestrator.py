@@ -53,10 +53,13 @@ Required JSON Schema Example:
 """
 
 def orchestrator_node(state: SupplyChainState, config: RunnableConfig):
-    logger.info("--- 🧠 RUNNING ORCHESTRATOR: PLANNING TASKS ---")
-    memories = state.get("memories", "No known facts.")
+    # 🌟 Read and increment the loop count
+    current_count = state.get("loop_count", 0)
+    new_count = current_count + 1
     
-    # Extract user_id from config
+    logger.info(f"--- 🧠 RUNNING ORCHESTRATOR (Iteration: {new_count}) ---")
+    
+    memories = state.get("memories", "No known facts.")
     user_id = config.get("configurable", {}).get("user_id", "Unknown")
     
     worker_responses = state.get("worker_responses", [])
@@ -100,15 +103,21 @@ def orchestrator_node(state: SupplyChainState, config: RunnableConfig):
             return {
                 "is_workflow_complete": True, 
                 "tasks": [], 
-                "generation": plan.final_answer
+                "generation": plan.final_answer,
+                "loop_count": 0  # 🌟 Reset counter when finished normally
             }
         else:
             logger.info(f"👷 Created {len(plan.tasks)} parallel tasks.")
             return {
                 "is_workflow_complete": False, 
-                "tasks": plan.tasks
+                "tasks": plan.tasks,
+                "loop_count": new_count # 🌟 Save incremented count
             }
 
     except (json.JSONDecodeError, ValidationError, Exception) as e:
         logger.error(f"❌ Orchestrator plan failed: {e}")
-        return {"is_workflow_complete": True, "generation": "I encountered an error while planning tasks."}
+        return {
+            "is_workflow_complete": True, 
+            "generation": "I encountered an error while planning tasks.",
+            "loop_count": 0
+        }

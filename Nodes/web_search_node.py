@@ -25,17 +25,18 @@ def web_search_node(state: RagState) -> Dict[str, Any]:
         ddg = DuckDuckGoSearchAPIWrapper(max_results=3)
         results = ddg.results(search_query, max_results=3)
         
-        # 🌟 FIX 2: Format results into a plain string to match RagState
         web_context = "--- WEB SEARCH RESULTS ---\n"
         found_titles = []
         
-        for r in results:
+        for idx, r in enumerate(results, 1):
             title = r.get("title", "Unknown Site")
             snippet = r.get("snippet", "")
             link = r.get("link", "")
             
             found_titles.append(title)
-            web_context += f"Source: {title} ({link})\nContent: {snippet}\n\n"
+            # Make the source tag blatantly obvious for the LLM
+            web_context += f"[Source: {title} - {link}]\n{snippet}\n\n"
+
             
         logger.info(f"Retrieved {len(results)} web snippets: {', '.join(found_titles)}")
             

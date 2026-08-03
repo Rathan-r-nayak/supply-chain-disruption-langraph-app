@@ -63,7 +63,7 @@ reasoning_llm = ChatOpenAI(
     temperature=0.1
 )
 
-os.environ["TIKTOKEN_CACHE_DIR"] = "C:\\Users\\GenAIBLRTKCUSR20\\Documents\\Team19\BankingApp\\TiktokenCache"
+# os.environ["TIKTOKEN_CACHE_DIR"] = "C:\\Users\\GenAIBLRTKCUSR20\\Documents\\Team19\BankingApp\\TiktokenCache"
 # EMBEDDING MODEL: For your RAG/VectorDB implementation
 embedding_model = AzureOpenAIEmbeddings(
     azure_endpoint=BASE_URL,

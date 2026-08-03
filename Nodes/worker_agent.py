@@ -22,6 +22,12 @@ CRITICAL RULES:
 2. ONCE A TOOL RETURNS A RESULT (even if it's an error), YOU MUST STOP. DO NOT CALL ANY MORE TOOLS.
 3. DO NOT call the exact same tool twice.
 4. Once you see the tool response in the history, write a brief text summary of the result so the Orchestrator can read it, and finish.
+
+CITATION RULE:
+When writing your final text summary, YOU MUST PRESERVE AND INCLUDE any URLs, links, or 'source_origin' tags provided by the tool. 
+- Example: "Trip #102 is active [Source: Internal Trip Database]"
+- Example: "Floods reported in Bengaluru ([Deccan Herald](https://link...))"
+If you omit the source, the system will fail its audit.
 """
 
 def get_worker_agent_node(all_mcp_tools: list[Any]):

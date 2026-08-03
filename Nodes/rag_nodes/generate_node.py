@@ -1,13 +1,16 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import ToolMessage
 from Config.llm_config import primary_llm
-from State.supply_chain_state import SupplyChainState # Ensure proper import
+
+# 🌟 FIX: Revert this import back to RagState
+from State.rag_state import RagState 
 
 from Utils.logger import get_logger
 
 logger = get_logger("GENERATE_NODE")
 
-def generate_node(state: SupplyChainState):
+# 🌟 FIX: Change the type hint back to RagState
+def generate_node(state: RagState):
     logger.info("--- 🧠 GENERATING FINAL RAG ANSWER ---")
     question = state.get("question", "")
     documents = state.get("documents", {})

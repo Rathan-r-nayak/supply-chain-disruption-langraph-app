@@ -21,10 +21,14 @@ from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
 from pydantic import BaseModel
 from rag.ingestion.pipeline import ingest_file
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
 
 # Import project modules
 from main import build_graph
-from Utils.Logger import get_logger
+from Utils.logger import get_logger
 from Config.llm_config import fast_llm
 
 logger = get_logger("SERVER_API")
@@ -44,13 +48,14 @@ except ImportError:
 
 logger.info("🔥 Starting Arize Phoenix for telemetry...")
 
+# =============================================================================
 # Configure OpenTelemetry to export spans to the Phoenix server
+# =============================================================================
 endpoint = "http://127.0.0.1:6006/v1/traces"
 tracer_provider = trace_sdk.TracerProvider()
 tracer_provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint)))
 trace_api.set_tracer_provider(tracer_provider)
 
-# Instrument LangChain/LangGraph under the hood
 LangChainInstrumentor().instrument()
 logger.info("✅ LangChain Instrumentor active. Traces will appear in Phoenix.")
 
@@ -88,6 +93,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# =============================================================================
+# Initialize Limiter (uses the user's IP address by default)
+# =============================================================================
+limiter = Limiter(key_func=get_remote_address)
+
+# Inside your FastAPI app initialization:
+
+# Register the limiter and exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # =============================================================================
 # FILE PATHS & METADATA DATABASE SETUP
@@ -221,8 +238,11 @@ async def login(req: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid user_id or password")
     return LoginResponse(user_id=req.user_id, role=user["role"])
 
+
 @app.post("/chat/stream")
+@limiter.limit("10/minute")
 async def chat_stream(
+    request: Request,
     thread_id: str = Form(...),
     user_id: str = Form(...),
     message: str = Form(None),
@@ -319,6 +339,61 @@ async def chat_stream(
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
+import os
+import tempfile
+from fastapi import File, UploadFile, HTTPException
+from Config.llm_config import client # Assuming your AzureOpenAI client is configured here
+
+# 🌟 New STT Endpoint
+@app.post("/chat/transcribe")
+@limiter.limit("10/minute")
+async def transcribe_audio(file: UploadFile = File(...)):
+    """
+    Receives an audio file from the frontend, sends it to Azure Whisper, 
+    and returns the transcribed text.
+    """
+    logger.info(f"🎙️ Received audio file for transcription: {file.filename}")
+    
+    # Check if the file is an acceptable audio format
+    allowed_types = ["audio/wav", "audio/mpeg", "audio/mp3", "audio/m4a", "audio/webm"]
+    if file.content_type not in allowed_types:
+        # Fallback check based on extension if content_type is generic
+        if not any(file.filename.endswith(ext) for ext in [".wav", ".mp3", ".m4a", ".webm"]):
+            raise HTTPException(status_code=400, detail="Invalid audio format.")
+
+    # Whisper requires an actual file object with a filename, so we save it temporarily
+    try:
+        suffix = f".{file.filename.split('.')[-1]}" if "." in file.filename else ".wav"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        # Open the temp file and send to Whisper
+        with open(tmp_file_path, "rb") as audio_file:
+            # Note: adjust the client call based on whether you use AzureOpenAI or OpenAI standard SDK
+            transcription = client.audio.transcriptions.create(
+                model="azure/genailab-maas-whisper", # Your specific MaaS model name
+                file=audio_file,
+                # Optional: prompt="Give it context about logistics, trucks, and cities to improve accuracy"
+            )
+            
+        transcribed_text = transcription.text
+        logger.info(f"✅ Transcription successful: '{transcribed_text}'")
+        
+        return {"text": transcribed_text}
+
+    except Exception as e:
+        logger.error(f"❌ Transcription failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process audio.")
+        
+    finally:
+        # Always clean up the temporary file
+        if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
+
+
+
 @app.get("/chat/history")
 async def get_history(thread_id: str):
     # Updated Checkpointer path
@@ -403,3 +478,76 @@ async def list_documents():
         DocumentInfo(filename=row[0], uploaded_by=row[1], uploaded_at=row[2])
         for row in rows
     ]
+
+
+# Add to ENDPOINTS section in server.py
+@app.post("/admin/scan_disruptions")
+@limiter.limit("2/minute")
+async def scan_disruptions():
+    """
+    Scans all hubs for real-time news using MCP, evaluates risk via LLM, 
+    and automatically flags identified disruptions into the DB.
+    """
+    logger.info("🔍 [GLOBAL RISK SCAN] Initiating automated risk scan across hubs...")
+    try:
+        # 1. Locate loaded MCP tools from lifespan session
+        news_tool = next((t for t in mcp_tools if t.name == "fetch_active_hub_news"), None)
+        flag_tool = next((t for t in mcp_tools if t.name == "flag_disruptions"), None)
+
+        if not news_tool or not flag_tool:
+            raise HTTPException(status_code=503, detail="MCP tools not connected or unavailable.")
+
+        # 2. Call news tool (passing empty list triggers automatic DB city lookup)
+        logger.info("📡 Fetching news across all registered logistics locations...")
+        news_data = await news_tool.ainvoke({"active_cities": []})
+
+        # 3. Pass news to LLM to evaluate for critical hazards
+        prompt = PromptTemplate.from_template("""
+        You are a Supply Chain Risk Evaluator. Analyze the following news items collected from logistics hubs:
+        {news_data}
+
+        Identify any REAL, SEVERE physical logistics disruptions (floods, highway closures, bridge collapses, strikes, major accidents).
+        Ignore generic weather or normal traffic reports.
+
+        Output strictly a JSON list of identified disruptions in this format:
+        [
+            {{
+                "location_name": "CityName",
+                "hazard_type": "Flood/Closure/Strike",
+                "hazard_summary": "Short concise summary of the issue"
+            }}
+        ]
+        If no disruptions are found, output an empty array: []
+        """)
+
+        chain = prompt | fast_llm
+        llm_res = await chain.ainvoke({"news_data": json.dumps(news_data)})
+
+        # Clean JSON markdown formatting if present
+        raw_content = llm_res.content.strip()
+        if raw_content.startswith("```"):
+            lines = raw_content.splitlines()
+            if lines[0].startswith("```"): lines = lines[1:]
+            if lines and lines[-1].startswith("```"): lines = lines[:-1]
+            raw_content = "\n".join(lines).strip()
+
+        flagged_items = json.loads(raw_content)
+
+        # 4. If hazards were detected, execute flag_disruptions tool
+        if flagged_items and isinstance(flagged_items, list) and len(flagged_items) > 0:
+            logger.info(f"🚨 [RISK SCAN] Disruption detected! Flagging {len(flagged_items)} items...")
+            flag_res = await flag_tool.ainvoke({"disruptions": flagged_items})
+            return {
+                "status": "success", 
+                "flagged_count": len(flagged_items), 
+                "details": flagged_items,
+                "result": flag_res
+            }
+
+        logger.info("✅ [RISK SCAN] Completed. No hazards detected.")
+        return {"status": "success", "flagged_count": 0, "message": "No new disruptions detected."}
+
+    except Exception as e:
+        logger.error(f"❌ Failed global risk scan: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
