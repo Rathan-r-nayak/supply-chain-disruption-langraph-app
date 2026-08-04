@@ -25,11 +25,13 @@ def orchestrator_router(state: SupplyChainState):
         
     tasks = state.get("tasks", [])
     
-    # 🌟 3. Map to parallel workers with your magic fix
+    # 🌟 3. Map to parallel workers with the WORKER CLEAN SLATE fix
     return [
         Send("worker_subgraph", {
             "task": task,
-            "messages": []
+            "messages": state.get("messages", []), # Pass context so the worker isn't blind
+            "worker_responses": [],                # Reset tool outputs for this specific run
+            "executed_tools": []                   # Reset tool tracking for this specific run
         }) 
         for task in tasks
     ]

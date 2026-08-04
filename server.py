@@ -25,7 +25,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
-
 # Import project modules
 from main import build_graph
 from Utils.logger import get_logger
@@ -40,6 +39,7 @@ from opentelemetry import trace as trace_api
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk import trace as trace_sdk
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from Tools.local_tools import search_logistics_policies, read_offloaded_file
 
 try:
     from Utils.database_manager import ltm_store
@@ -64,7 +64,7 @@ logger.info("✅ LangChain Instrumentor active. Traces will appear in Phoenix.")
 # =============================================================================
 mcp_session = None
 mcp_tools = []
-MCP_SERVER_URL = "http://localhost:8000/mcp/sse"
+MCP_SERVER_URL = "http://localhost:8080/mcp/sse"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,12 +75,19 @@ async def lifespan(app: FastAPI):
         async with sse_client(MCP_SERVER_URL) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                mcp_tools = await load_mcp_tools(session)
+                fetched_mcp_tools = await load_mcp_tools(session)
+                mcp_tools = fetched_mcp_tools + [
+                    search_logistics_policies, 
+                    read_offloaded_file
+                ]
                 mcp_session = session
                 logger.info(f"✅ FastMCP Connected! Loaded {len(mcp_tools)} tools.")
                 yield
     except Exception as e:
-        logger.warning(f"⚠️ FastMCP Connection skipped/failed: {e}")
+        logger.warning(f"⚠️ FastMCP Connection failed: {e}")
+        # 🌟 3. FALLBACK: Ensure local tools still load even if the MCP server is down
+        logger.info("🔧 Loading local tools only as fallback.")
+        mcp_tools = [search_logistics_policies, read_offloaded_file]
         yield
     logger.info("🛑 Disconnected from FastMCP.")
 
@@ -300,9 +307,19 @@ async def chat_stream(
 
                     elif mode == "updates":
                         for node_name, state_update in payload.items():
-                            if node_name in ["input_guardrail", "triage_router", "output_guardrail"]:
+                            if node_name in ["input_guardrail", "triage_router", "output_guardrail", "aggregator"]:
                                 out_msg = None
                                 
+                                # 🌟 NEW: Check for Next Best Actions and send as a separate event
+                                if "next_best_actions" in state_update and state_update["next_best_actions"]:
+                                    nba_json = json.dumps(state_update["next_best_actions"])
+                                    yield f"event: next_actions\ndata: {nba_json}\n\n"
+
+                                if "chart_payload" in state_update and state_update["chart_payload"]:
+                                    chart_json = json.dumps(state_update["chart_payload"])
+                                    yield f"event: chart_data\ndata: {chart_json}\n\n"
+                                
+                                # Existing logic for the main message text
                                 if state_update.get("messages"):
                                     last_msg = state_update["messages"][-1]
                                     if getattr(last_msg, "type", "") == "ai":
@@ -345,23 +362,26 @@ from fastapi import File, UploadFile, HTTPException
 from Config.llm_config import client # Assuming your AzureOpenAI client is configured here
 
 # 🌟 New STT Endpoint
+# At the top of server.py, update your imports:
+from Config.llm_config import fast_llm, stt_client
+
+# ... [Keep all other server.py code exactly the same until the transcribe endpoint] ...
+
+# 🌟 New STT Endpoint
 @app.post("/chat/transcribe")
 @limiter.limit("10/minute")
-async def transcribe_audio(file: UploadFile = File(...)):
+async def transcribe_audio(request: Request, file: UploadFile = File(...)):
     """
     Receives an audio file from the frontend, sends it to Azure Whisper, 
     and returns the transcribed text.
     """
     logger.info(f"🎙️ Received audio file for transcription: {file.filename}")
     
-    # Check if the file is an acceptable audio format
     allowed_types = ["audio/wav", "audio/mpeg", "audio/mp3", "audio/m4a", "audio/webm"]
     if file.content_type not in allowed_types:
-        # Fallback check based on extension if content_type is generic
         if not any(file.filename.endswith(ext) for ext in [".wav", ".mp3", ".m4a", ".webm"]):
             raise HTTPException(status_code=400, detail="Invalid audio format.")
 
-    # Whisper requires an actual file object with a filename, so we save it temporarily
     try:
         suffix = f".{file.filename.split('.')[-1]}" if "." in file.filename else ".wav"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
@@ -369,13 +389,11 @@ async def transcribe_audio(file: UploadFile = File(...)):
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
 
-        # Open the temp file and send to Whisper
         with open(tmp_file_path, "rb") as audio_file:
-            # Note: adjust the client call based on whether you use AzureOpenAI or OpenAI standard SDK
-            transcription = client.audio.transcriptions.create(
-                model="azure/genailab-maas-whisper", # Your specific MaaS model name
+            # 🌟 CHANGED: Use the official stt_client here
+            transcription = stt_client.audio.transcriptions.create(
+                model="azure/genailab-maas-whisper", 
                 file=audio_file,
-                # Optional: prompt="Give it context about logistics, trucks, and cities to improve accuracy"
             )
             
         transcribed_text = transcription.text
@@ -388,7 +406,6 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Failed to process audio.")
         
     finally:
-        # Always clean up the temporary file
         if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
             os.remove(tmp_file_path)
 
@@ -483,7 +500,7 @@ async def list_documents():
 # Add to ENDPOINTS section in server.py
 @app.post("/admin/scan_disruptions")
 @limiter.limit("2/minute")
-async def scan_disruptions():
+async def scan_disruptions(request: Request):
     """
     Scans all hubs for real-time news using MCP, evaluates risk via LLM, 
     and automatically flags identified disruptions into the DB.

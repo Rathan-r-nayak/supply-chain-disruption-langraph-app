@@ -18,25 +18,22 @@ def get_worker_subgraph(all_mcp_tools):
     # 🌟 ACCEPT CONFIG IN THE PARAMETERS
     async def run_rag_tool(state: WorkerState, config: RunnableConfig):
         last_msg = state["messages"][-1]
-        
-        # 1. Extract the tool call ID and the query the LLM generated
         tool_call = last_msg.tool_calls[0]
         tool_call_id = tool_call["id"]
         
-        # Depending on your tool schema, the argument might be named 'query' or 'question'
         query = tool_call["args"].get("query", "") or tool_call["args"].get("question", "")
         
-        # 2. Run the RAG Subgraph with the EXPLICIT question AND THE CONFIG
-        # 🌟 PASS CONFIG HERE so the RAG graph shares the same memory/interrupt state
+        # 🌟 THE RAG CLEAN SLATE: Explicitly reset all RagState variables here
         rag_result = await rag_subgraph_app.ainvoke({
             "question": query, 
-            "messages": state["messages"]
+            "messages": state["messages"],
+            "documents": {"vector_facts": [], "graph_facts_used": []}, # Clear old context
+            "relevance_score": "",                                     # Clear old scores
+            "knowledge_retries": 0,                                    # Reset failure count
+            "generation": ""                                           # Clear old answers
         }, config=config) 
         
-        # 3. Get the final generated answer
         final_answer = rag_result.get("generation", "No answer found.")
-        
-        # 4. Format it strictly as a ToolMessage so OpenAI doesn't crash!
         tool_msg = ToolMessage(content=final_answer, tool_call_id=tool_call_id)
         
         return {"messages": [tool_msg]}
@@ -59,7 +56,8 @@ def get_worker_subgraph(all_mcp_tools):
     def format_worker_output(state: WorkerState):
         """Extracts the final LLM message and pushes it to worker_responses."""
         final_message = state["messages"][-1].content
-        return {"worker_responses": [f"Task {state['task'].task_id} Result: {final_message}"]}
+        task_id = state['task'].get('task_id', 'unknown') # 🌟 FIXED
+        return {"worker_responses": [f"Task {task_id} Result: {final_message}"]}
 
     builder.add_node("format_output", format_worker_output)
     

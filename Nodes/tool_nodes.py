@@ -1,11 +1,11 @@
 from langgraph.prebuilt import ToolNode
+from Tools.tool_config import SENSITIVE_TOOL_NAMES
 from Utils.logger import get_logger
 
 logger = get_logger("TOOL_NODES")
 
 # Define which tools require Human-in-the-Loop approval. 
 # (e.g., flagging disruptions could go here if you want LangGraph to pause)
-SENSITIVE_TOOL_NAMES = {}
 
 def get_tool_nodes(all_mcp_tools):
     safe_tools = [t for t in all_mcp_tools if t.name not in SENSITIVE_TOOL_NAMES]

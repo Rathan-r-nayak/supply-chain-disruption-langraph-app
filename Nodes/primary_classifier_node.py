@@ -48,15 +48,33 @@ def triage_router(state: SupplyChainState, config: RunnableConfig):
     
     logger.info(f"🗣️ USER REQ : {question} | User ID: {user_id}")
 
+    # 🌟 CRITICAL FIX: Reset the loop_count to 0 for every new user message
+    base_state_update = {
+        "loop_count": 0,
+        "worker_responses": [],       # Triggers merge_lists to wipe the list
+        "tasks": [],                  # Clears old orchestration plans
+        "documents": [],              # Clears old RAG/Web Search context
+        "is_workflow_complete": False,# Ensures the Orchestrator doesn't auto-skip
+        "knowledge_retries": 0,       # Resets RAG failure counts
+        "next_best_actions": [],      # Clears old UI suggestions
+        "chart_payload": None,        # Prevents rendering the old chart
+        "generation": ""              # Clears the previous final answer
+    }
+
     if not question:
         return {
+            **base_state_update,
             "requires_workflow": False,
             "generation": "How can I help you today?",
-            "worker_responses": [],
         }
 
-    recent_messages = get_short_term_memory(state.get("messages", []), k=4)
-    chat_history = format_chat_history(recent_messages)
+    summary = state.get("conversation_summary", "")
+    raw_messages = state.get("messages", [])
+    
+    immediate_context_msgs = get_short_term_memory(raw_messages, k=2)
+    immediate_context_str = format_chat_history(immediate_context_msgs)
+    
+    chat_history = f"Summary of older conversation:\n{summary}\n\nImmediate Context:\n{immediate_context_str}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", TRIAGE_SYSTEM_PROMPT),
@@ -88,20 +106,20 @@ def triage_router(state: SupplyChainState, config: RunnableConfig):
 
         if decision.is_workflow_required:
             return {
+                **base_state_update,
                 "requires_workflow": True,
-                "worker_responses": [],
             }
 
         return {
+            **base_state_update,
             "requires_workflow": False,
             "messages": [AIMessage(content=decision.direct_response)],
             "generation": decision.direct_response,
-            "worker_responses": [],
         }
 
     except Exception as e:
         logger.error(f"❌ Primary classifier parsing/validation failed: {e}")
         return {
+            **base_state_update,
             "requires_workflow": True,
-            "worker_responses": [],
         }

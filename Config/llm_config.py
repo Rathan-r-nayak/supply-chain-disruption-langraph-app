@@ -63,6 +63,14 @@ reasoning_llm = ChatOpenAI(
     temperature=0.1
 )
 
+
+
+stt_client = OpenAI(
+    base_url=BASE_URL,
+    api_key=API_KEY,
+    http_client=client # This safely injects your custom SSL-bypassing httpx client
+)
+
 # os.environ["TIKTOKEN_CACHE_DIR"] = "C:\\Users\\GenAIBLRTKCUSR20\\Documents\\Team19\BankingApp\\TiktokenCache"
 # EMBEDDING MODEL: For your RAG/VectorDB implementation
 embedding_model = AzureOpenAIEmbeddings(

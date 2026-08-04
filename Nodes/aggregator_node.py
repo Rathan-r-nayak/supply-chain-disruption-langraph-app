@@ -1,3 +1,7 @@
+import json
+from typing import Optional, List
+from pydantic import BaseModel, Field, ValidationError
+from Schema.aggregator_output_schema import AggregatorOutput
 from State.supply_chain_state import SupplyChainState
 from Utils.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate
@@ -6,10 +10,13 @@ from langchain_core.messages import AIMessage
 
 # 🌟 IMPORT FOR NBA HELPER
 from Utils.next_best_action_helper import generate_next_best_actions
-
+from Utils.caculate_accuracy_of_chat import calculate_accuracy_score
 logger = get_logger("AGGREGATOR")
 
-# 🌟 SYSTEM PROMPT WITH CITATION MANDATES
+
+# ==========================================
+# 2. SYSTEM PROMPT WITH JSON INSTRUCTIONS
+# ==========================================
 AGGREGATOR_SYSTEM_PROMPT = """You are the final response generator for a Supply Chain and Logistics Assistant.
 Your system has completed several internal tasks to gather information for the user.
 
@@ -27,59 +34,31 @@ CITATION RULES (MANDATORY):
    - For RAG Docs: "...claims must be filed within 24 hours [Source: operations_guide.pdf, Page 12]."
    - For Web/News: "...flooding reported on NH-48 ([Times of India](https://url_here))."
 6. Do NOT invent, hallucinate, or guess sources. Only cite sources explicitly present in the provided internal data.
+
+CHART GENERATION RULES:
+7. If the internal data contains numeric metrics, route comparisons, delay times, or inventory counts, set 'is_chartable' to true and generate a 'chart_payload'.
+8. If the data is purely text (e.g., policies, weather summaries, news), set 'is_chartable' to false and 'chart_payload' to null.
+
+OUTPUT FORMAT (STRICT JSON REQUIRED):
+You MUST output your response as a valid JSON object. Do not include any conversational text before or after the JSON.
+
+Required JSON Schema Example:
+{
+  "final_answer": "The delivery to Mumbai is delayed by 45 minutes [Source: Logistics DB].",
+  "is_chartable": true,
+  "chart_payload": {
+    "chart_type": "bar",
+    "title": "Delivery Delays (Minutes)",
+    "labels": ["Mumbai"],
+    "datasets": [
+      {
+        "label": "Delay",
+        "data": [45]
+      }
+    ]
+  }
+}
 """
-
-def calculate_accuracy_score(state_messages: list) -> str:
-    """
-    Deterministically calculates a confidence score by inspecting tool calls 
-    in the message history without extra LLM calls or random numbers.
-    """
-    if not state_messages:
-        return "50% ⚪ (Base Confidence - Direct LLM Generation)"
-
-    tool_names = set()
-
-    # Scan message history for tool calls or tool response names
-    for msg in state_messages:
-        # Check AIMessage tool calls
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                if isinstance(tc, dict) and "name" in tc:
-                    tool_names.add(tc["name"].lower())
-        # Check ToolMessage/Message names
-        if hasattr(msg, "name") and msg.name:
-            tool_names.add(msg.name.lower())
-
-    # Category sets matching your codebase tools
-    mcp_db_tools = {
-        "get_driver_trip_details", 
-        "flag_disruptions", 
-        "get_locations", 
-        "get_trips"
-    }
-    rag_tools = {
-        "search_logistics_policies", 
-        "rag_subgraph", 
-        "generate_node"
-    }
-    web_tools = {
-        "fetch_active_hub_news", 
-        "web_search_node", 
-        "duckduckgo_search"
-    }
-
-    # Deterministic Hierarchy: MCP DB (95%) > RAG (85%) > Web Search (70%) > No Tool (50%)
-    if any(t in tool_names for t in mcp_db_tools):
-        return "95% 🟢 (High Confidence - Verified Internal Database)"
-    
-    elif any(t in tool_names for t in rag_tools):
-        return "85% 🟡 (Medium-High Confidence - Verified Document RAG)"
-    
-    elif any(t in tool_names for t in web_tools):
-        return "70% 🟠 (Medium Confidence - External Web Search)"
-    
-    else:
-        return "50% ⚪ (Base Confidence - Direct LLM Generation)"
 
 
 def aggregator_node(state: SupplyChainState):
@@ -87,12 +66,10 @@ def aggregator_node(state: SupplyChainState):
     worker_responses_list = state.get("worker_responses", [])
     state_messages = state.get("messages", [])
     
-    # 🌟 1. Check for empty data FIRST before adding any warnings
     if not worker_responses_list:
         logger.warning("⚠️ No worker responses found. Returning default error to user.")
         error_msg = "I'm sorry, but I was unable to retrieve the requested information at this time."
         
-        # If it also timed out, let the user know why it failed
         if state.get("loop_count", 0) >= 3:
             error_msg += " (System Request Timeout)"
             
@@ -102,7 +79,6 @@ def aggregator_node(state: SupplyChainState):
             "messages": [AIMessage(content=error_msg)]
         }
 
-    # 2. Safely join the data
     combined_worker_data = "\n\n".join(worker_responses_list)
     logger.info(f"📥 [AGGREGATOR INPUT] Aggregating {len(worker_responses_list)} worker result(s).")
     
@@ -111,50 +87,70 @@ def aggregator_node(state: SupplyChainState):
         ("human", "Original User Query: {question}\n\nInternal Data Gathered:\n{worker_data}")
     ])
     
+    # 🌟 Removed structured output, using standard LLM call
     chain = prompt | fast_llm
     
     try:
-        # 3. Generate synthesized response with citations
         response = chain.invoke({
             "question": question,
             "worker_data": combined_worker_data
         })
-        final_answer = response.content
         
-        # 🌟 4. Check for timeout and append warning directly to the final answer
+        # 🌟 MANUAL JSON PARSING (Same as Orchestrator)
+        raw_content = response.content.strip()
+        
+        if raw_content.startswith("```"):
+            lines = raw_content.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            raw_content = "\n".join(lines).strip()
+
+        data = json.loads(raw_content)
+        parsed_response = AggregatorOutput.model_validate(data)
+        
+        # Extract the text
+        final_answer = parsed_response.final_answer
+        
+        # Extract the chart data (convert to dict if it exists)
+        chart_data = parsed_response.chart_payload.model_dump() if (parsed_response.is_chartable and parsed_response.chart_payload) else None
+        
+        if chart_data:
+            logger.info(f"📊 Chart Payload Generated: {chart_data['title']}")
+        
         if state.get("loop_count", 0) >= 3:
             final_answer += "\n\n> ⚠️ **System Notice:** _Processing timed out before all tasks could complete. The information above may be partial._"
 
-        # 5. Deterministically calculate system accuracy score
         logger.info("📊 Calculating deterministic confidence score...")
         accuracy_text = calculate_accuracy_score(state_messages)
         final_answer += f"\n\n---\n**📊 System Confidence:** {accuracy_text}"
         
-        # 6. Generate Next Best Actions (NBA)
         logger.info("🧠 Generating Next Best Actions...")
         nba_list = generate_next_best_actions(user_query=question, final_response=final_answer)
         
-        # 7. Append formatted NBA text to output
         if nba_list:
             nba_text = "\n\n**💡 Suggested Next Actions:**\n" + "\n".join([f"- {action}" for action in nba_list])
             final_answer += nba_text
         
-        logger.info("✅ Aggregator successfully generated response, accuracy score, and NBA.")
-        logger.info(f"📤 [AGGREGATOR OUTPUT] -> \n{final_answer}")
+        logger.info("✅ Aggregator successfully generated response, accuracy score, NBA, and Chart Payload.")
+        logger.info(f"📤 [AGGREGATOR OUTPUT TEXT] -> \n{final_answer}")
         
         return {
             "generation": final_answer,
             "next_best_actions": nba_list,
+            "chart_payload": chart_data,
             "messages": [AIMessage(content=final_answer)]
         }
         
-    except Exception as e:
-        logger.error(f"❌ Aggregator failed during synthesis: {e}")
-        fallback = "An error occurred while formatting your final response."
+    except (json.JSONDecodeError, ValidationError, Exception) as e:
+        logger.error(f"❌ Aggregator failed during synthesis/parsing: {e}")
+        fallback = "An error occurred while formatting your final response. Please try again."
         logger.info(f"📤 [AGGREGATOR FALLBACK OUTPUT] -> {fallback}")
         
         return {
             "generation": fallback,
             "next_best_actions": [], 
+            "chart_payload": None,
             "messages": [AIMessage(content=fallback)]
         }

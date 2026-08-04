@@ -7,7 +7,7 @@ logger = get_logger("RAG_SUBGRAPH")
 def ask_web_search(state: RagState):
     logger.info("--- 🛑 ASKING USER FOR WEB SEARCH (HITL) ---")
     # Append the question to the state. The UI will show this to the user.
-    return {"messages": [AIMessage(content="I couldn't find this in our internal policies. Would you like me to search the web? (Yes/No)")]}
+    return {"messages": [AIMessage(content="I couldn't find this in our internal policies. Would you like me to search the web? (Reply 'Proceed' or 'Skip')")]}
 
 
 # --- 🌟 ROUTING LOGIC ---
@@ -24,12 +24,13 @@ def check_relevance(state: RagState):
         return "rewrite_node"
 
 def check_web_search_approval(state: RagState):
-    """Evaluates the user's Yes/No answer after the graph resumes."""
+    """Evaluates the user's answer after the graph resumes."""
     last_msg = state.get("messages", [])[-1].content.lower()
-    if "yes" in last_msg or "y" in last_msg:
+    
+    # 🌟 FIXED: Checks for "proceed" instead of "yes"
+    if "proceed" in last_msg:
         logger.info("✅ User approved web search.")
         return "web_search_node"
     
     logger.info("❌ User denied web search. Forcing generation with existing docs.")
     return "generate_node"
-

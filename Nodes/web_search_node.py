@@ -44,8 +44,25 @@ def web_search_node(state: RagState) -> Dict[str, Any]:
         logger.error(f"DuckDuckGo API Request Failed: {e}")
         web_context = "Web search failed or returned no results."
 
-    # 🌟 FIX 2: Safely append the new string to the existing document string
-    existing_docs = state.get("documents", "")
-    updated_docs = f"{existing_docs}\n\n{web_context}" 
+    # 🌟 FIXED: Safely get the existing HybridDocuments dictionary
+    existing_docs = state.get("documents") or {}
     
-    return {"documents": updated_docs}
+    # Extract existing lists, defaulting to empty lists if they don't exist yet
+    vector_facts = existing_docs.get("vector_facts", [])
+    graph_facts = existing_docs.get("graph_facts_used", [])
+    
+    # Append the new web search data as a properly formatted VectorFact
+    if web_context:
+        vector_facts.append({
+            "content": web_context,
+            "source": "DuckDuckGo Web Search",
+            "score": 1.0
+        })
+    
+    # Return the perfectly preserved dictionary structure
+    return {
+        "documents": {
+            "vector_facts": vector_facts,
+            "graph_facts_used": graph_facts
+        }
+    }

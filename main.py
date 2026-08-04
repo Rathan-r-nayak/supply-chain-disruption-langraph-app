@@ -13,7 +13,7 @@ from Nodes.output_guardrail import output_guardrail_node
 from Nodes.remember_node import remember_node
 from Nodes.recall_node import recall_node
 from Nodes.primary_classifier_node import triage_router
-from Nodes.orchestrator import orchestrator_node
+from Nodes.orchestrator import get_orchestrator_node
 from Nodes.aggregator_node import aggregator_node
 from Graph.worker_sub_graph import get_worker_subgraph
 
@@ -37,6 +37,7 @@ def build_graph(all_mcp_tools, checkpointer=None, ltm_store=None):
     Assembles and compiles the map-reduce supply chain agent.
     """
     worker_subgraph = get_worker_subgraph(all_mcp_tools)
+    orchestrator_node = get_orchestrator_node(all_mcp_tools)
     workflow = StateGraph(SupplyChainState)
 
     # 1. Add Nodes
@@ -48,7 +49,7 @@ def build_graph(all_mcp_tools, checkpointer=None, ltm_store=None):
     workflow.add_node("output_guardrail", output_guardrail_node)
     workflow.add_node("triage_router", triage_router)
     workflow.add_node("orchestrator", orchestrator_node)
-    workflow.add_node("worker_subgraph", worker_subgraph) 
+    workflow.add_node("worker_subgraph", worker_subgraph)
     workflow.add_node("aggregator", aggregator_node)
     workflow.add_node("remember_node", remember_node)
     workflow.add_node("summarize_conversation_node", summarize_conversation_node)

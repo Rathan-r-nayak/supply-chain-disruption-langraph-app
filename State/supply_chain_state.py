@@ -39,7 +39,9 @@ class SupplyChainState(TypedDict, total=False):
     knowledge_retries: int
 
     next_best_actions: list[str]
+    chart_payload: dict
 
+    conversation_summary: str
     generation: str
     
 
@@ -47,5 +49,7 @@ class WorkerState(TypedDict):
     task: Task
     messages: Annotated[list, add_messages]
     worker_responses: list[str]
+
+    executed_tools: list[str]
 
 memory_store = InMemoryStore()
