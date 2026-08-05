@@ -5,7 +5,7 @@ from State.supply_chain_state import SupplyChainState
 from Utils.logger import get_logger
 from langchain_core.messages import AIMessage
 
-from Config.llm_config import fast_llm 
+from Config.llm_config import nano_llm 
 
 logger = get_logger("INPUT_GUARDRAIL")
 
@@ -54,7 +54,7 @@ def input_guardrail_node(state: SupplyChainState):
 
     try:
         messages = eval_prompt.format_messages(question=sanitized_question)
-        response = fast_llm.invoke(messages)
+        response = nano_llm.invoke(messages)
         
         response_text = response.content.strip()
         if response_text.startswith("```json"):

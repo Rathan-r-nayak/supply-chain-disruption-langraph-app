@@ -1,5 +1,7 @@
 from langchain_core.tools import tool
 import os
+import aiofiles
+
 
 @tool
 def search_logistics_policies(query: str) -> str:
@@ -22,3 +24,23 @@ def read_offloaded_file(filepath: str, search_keyword: str = None) -> str:
                     break
                     
     return "\n".join(matches) if matches else "No matching entries found."
+
+
+
+
+# @tool
+# async def read_offloaded_file(filepath: str, search_keyword: str = None) -> str:
+#     """Reads lines from an offloaded file matching an optional search keyword."""
+#     if not os.path.exists(filepath):
+#         return "File not found."
+    
+#     matches = []
+#     # Use asynchronous file reading to free up the FastAPI event loop
+#     async with aiofiles.open(filepath, mode="r", encoding="utf-8") as f:
+#         async for line in f:
+#             if not search_keyword or search_keyword.lower() in line.lower():
+#                 matches.append(line.strip())
+#                 if len(matches) >= 15:  
+#                     break
+                    
+#     return "\n".join(matches) if matches else "No matching entries found."

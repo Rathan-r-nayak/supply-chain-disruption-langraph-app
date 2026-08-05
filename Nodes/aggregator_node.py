@@ -5,7 +5,7 @@ from Schema.aggregator_output_schema import AggregatorOutput
 from State.supply_chain_state import SupplyChainState
 from Utils.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate
-from Config.llm_config import fast_llm
+from Config.llm_config import synthesis_llm
 from langchain_core.messages import AIMessage
 
 # 🌟 IMPORT FOR NBA HELPER
@@ -88,7 +88,7 @@ def aggregator_node(state: SupplyChainState):
     ])
     
     # 🌟 Removed structured output, using standard LLM call
-    chain = prompt | fast_llm
+    chain = prompt | synthesis_llm
     
     try:
         response = chain.invoke({

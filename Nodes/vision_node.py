@@ -3,7 +3,7 @@ import base64
 from langchain_core.messages import HumanMessage
 from State.supply_chain_state import SupplyChainState
 from Utils.logger import get_logger
-from Config.llm_config import primary_llm
+from Config.llm_config import vision_llm
 
 logger = get_logger("VISION_NODE")
 
@@ -35,7 +35,7 @@ def analyze_image_context(image_path: str) -> str:
             ]
         )
         
-        response = primary_llm.invoke([message])
+        response = vision_llm.invoke([message])
         return response.content
         
     except Exception as e:

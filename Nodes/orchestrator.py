@@ -7,7 +7,7 @@ from State.supply_chain_state import SupplyChainState
 from Schema.task import OrchestratorPlan
 from Utils.helpers import format_chat_history, get_short_term_memory
 from Utils.logger import get_logger
-from Config.llm_config import primary_llm
+from Config.llm_config import brain_llm, test_brain_llm
 
 logger = get_logger("ORCHESTRATOR")
 
@@ -94,7 +94,7 @@ def get_orchestrator_node(all_mcp_tools: list[Any]):
             ("human", "Conversation Context:\n{chat_history}\n\nRequest: {question}") # Updated label to "Conversation Context"
         ])
 
-        chain = prompt | primary_llm
+        chain = prompt | test_brain_llm
 
         try:
             response = chain.invoke({

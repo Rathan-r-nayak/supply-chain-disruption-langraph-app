@@ -64,7 +64,7 @@ logger.info("✅ LangChain Instrumentor active. Traces will appear in Phoenix.")
 # =============================================================================
 mcp_session = None
 mcp_tools = []
-MCP_SERVER_URL = "http://localhost:8080/mcp/sse"
+MCP_SERVER_URL = "http://localhost:8000/mcp/sse"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

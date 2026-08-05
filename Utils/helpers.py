@@ -6,7 +6,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.store.base import BaseStore
 
 # Import your primary model for vision tasks
-from Config.llm_config import primary_llm 
+# from Config.llm_config import primary_llm 
 
 logger = get_logger("HELPERS")
 
