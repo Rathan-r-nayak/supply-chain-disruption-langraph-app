@@ -37,6 +37,7 @@ def check_semantic_cache_node(state: SupplyChainState, config: RunnableConfig):
 def save_semantic_cache_node(state: SupplyChainState, config: RunnableConfig):
     """Runs at the end of the graph. Dynamically assigns scope based on tool usage."""
     if state.get("is_cache_hit", False):
+        logger.info("⏭️ Skipping semantic cache save (Request was served from cache).")
         return {}
 
     logger.info("--- 💾 SAVING TO SEMANTIC CACHE ---")
@@ -44,10 +45,29 @@ def save_semantic_cache_node(state: SupplyChainState, config: RunnableConfig):
     generation = state.get("generation", "")
     user_id = config.get("configurable", {}).get("user_id", "Unknown")
     
+    # 🌟 FIX 1: DO NOT CACHE ERROR RESPONSES
+    error_indicators = [
+        "unable to retrieve",
+        "encountered an error",
+        "i'm sorry, but",
+        "an internal error",
+        "failed to",
+        "error while planning"
+    ]
+    if any(err in generation.lower() for err in error_indicators):
+        logger.warning("⚠️ Skipping cache save: Response appears to be an error fallback.")
+        return {}
+        
     # DYNAMIC SCOPE DETECTION
-    # Default to global cache (so everyone shares the answer)
+    # Default to global cache (so everyone shares the generic answers)
     detected_scope = "global"
     
+    # 🌟 FIX 2: HEURISTIC INTENT CHECK
+    # If the user asks about themselves, lock to user scope inherently.
+    personal_pronouns = ["my", " i ", " me ", "mine", " i'm ", " am i "]
+    if any(p in f" {question.lower()} " for p in personal_pronouns):
+        detected_scope = "user"
+        
     # Look back through the conversation messages to see what tools the AI used
     for msg in state.get("messages", []):
         if hasattr(msg, "tool_calls") and msg.tool_calls:
@@ -60,11 +80,15 @@ def save_semantic_cache_node(state: SupplyChainState, config: RunnableConfig):
             break
             
     if question and generation:
+        logger.info(f"💾 Saving query to semantic cache [Scope: '{detected_scope}'] for User ID: '{user_id}'")
         app_semantic_cache.set(
             query=question, 
             response=generation, 
             scope=detected_scope, 
             user_id=user_id
         )
+        logger.info("✅ Successfully saved response to semantic cache.")
+    else:
+        logger.warning("⚠️ Skipping cache save: missing question or generation content.")
         
     return {}

@@ -8,6 +8,7 @@ logger = get_logger("SUMMARIZE_NODE")
 
 def summarize_conversation_node(state: SupplyChainState):
     """Summarizes older conversation history while ignoring internal tool messages and offload pointers."""
+    logger.info("--- 🗜️ RUNNING SHORT-TERM MEMORY SUMMARIZER ---")
     messages = state.get("messages", [])
     current_summary = state.get("conversation_summary", "")
     
@@ -19,9 +20,10 @@ def summarize_conversation_node(state: SupplyChainState):
     
     # Trigger summarization only when we have more than 6 conversational turns
     if len(valid_dialogue) <= 6:
+        logger.info(f"ℹ️ Dialogue turns ({len(valid_dialogue)}) <= 6. Skipping STM summarization.")
         return {}
         
-    logger.info("--- 🗜️ COMPRESSING SHORT-TERM MEMORY ---")
+    logger.info(f"🗜️ Dialogue turns ({len(valid_dialogue)}) > 6. Compressing older turns into short-term summary...")
     
     # Summarize everything except the last 2 turns to maintain immediate context
     messages_to_summarize = valid_dialogue[:-2]

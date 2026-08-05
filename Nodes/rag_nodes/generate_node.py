@@ -27,6 +27,8 @@ def generate_node(state: RagState):
     else:
         context_str = str(documents)
 
+    logger.info(f"📥 Invoking RAG Synthesis LLM for Question: '{question}' (Retries: {retries})")
+
     # 🌟 3. Update the System Prompt with strict citation rules
     gen_prompt = ChatPromptTemplate.from_messages([
         ("system", (
@@ -46,6 +48,7 @@ def generate_node(state: RagState):
     })
     
     final_text = response.content
+    logger.info(f"✅ RAG Answer Generated (Length: {len(final_text)} chars).")
     
     tool_msg = None
     for msg in reversed(messages):
@@ -53,6 +56,7 @@ def generate_node(state: RagState):
             for tc in msg.tool_calls:
                 # Update tool name to match your supply chain RAG tool if applicable
                 if tc["name"] in ["search_bank_policies", "search_logistics_policies"]: 
+                    logger.info(f"📦 Packaging RAG ToolMessage for tool '{tc['name']}' (ID: {tc['id']})")
                     tool_msg = ToolMessage(
                         content=final_text,
                         tool_call_id=tc["id"],

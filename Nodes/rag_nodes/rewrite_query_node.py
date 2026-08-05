@@ -12,14 +12,15 @@ def rewrite_node(state: RagState):
     logger.info("--- ✍️ REWRITING KNOWLEDGE QUERY ---")
     question = state.get("question", "")
     retries = state.get("knowledge_retries", 0)
+    logger.info(f"✍️ Rewriting query for Attempt #{retries + 1}. Original: '{question}'")
 
     rewrite_prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert at optimizing search queries for hybrid vector/graph databases. Output a refined, highly specific search query as plain text without changing the meaning of the original query."),
         ("human", "Original question: {question}")
     ])
 
-    new_query = str((rewrite_prompt | fast_llm).invoke({"question": question}).content)
-    logger.info(f"New Query: {new_query}")
+    new_query = str((rewrite_prompt | fast_llm).invoke({"question": question}).content).strip()
+    logger.info(f"✨ Rewritten Query: '{new_query}'")
 
     # Update the question for the next retrieval loop
     return {

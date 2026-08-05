@@ -8,6 +8,10 @@ from Nodes.tool_nodes import get_tool_nodes
 from Edges.route_worker_tools import route_worker_tools
 from State.supply_chain_state import WorkerState
 
+from Utils.logger import get_logger
+
+logger = get_logger("WORKER_SUBGRAPH")
+
 def get_worker_subgraph(all_mcp_tools):
     """Compiles the worker and its tools into an isolated sub-graph."""
     
@@ -22,6 +26,7 @@ def get_worker_subgraph(all_mcp_tools):
         tool_call_id = tool_call["id"]
         
         query = tool_call["args"].get("query", "") or tool_call["args"].get("question", "")
+        logger.info(f"--- 📚 RUNNING RAG TOOL WRAPPER (Query: '{query}') ---")
         
         # 🌟 THE RAG CLEAN SLATE: Explicitly reset all RagState variables here
         rag_result = await rag_subgraph_app.ainvoke({
@@ -34,6 +39,7 @@ def get_worker_subgraph(all_mcp_tools):
         }, config=config) 
         
         final_answer = rag_result.get("generation", "No answer found.")
+        logger.info(f"✅ RAG Subgraph finished. Result length: {len(final_answer)} chars.")
         tool_msg = ToolMessage(content=final_answer, tool_call_id=tool_call_id)
         
         return {"messages": [tool_msg]}
@@ -57,6 +63,8 @@ def get_worker_subgraph(all_mcp_tools):
         """Extracts the final LLM message and pushes it to worker_responses."""
         final_message = state["messages"][-1].content
         task_id = state['task'].get('task_id', 'unknown') # 🌟 FIXED
+        logger.info(f"--- 📝 FORMATTING WORKER OUTPUT (Task ID: '{task_id}') ---")
+        logger.info(f"📤 Pushed output for Task '{task_id}' to worker_responses.")
         return {"worker_responses": [f"Task {task_id} Result: {final_message}"]}
 
     builder.add_node("format_output", format_worker_output)

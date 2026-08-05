@@ -55,18 +55,27 @@ To ensure your Human-in-the-Loop security is fully functional for the judges, wh
 
 - run the MCP server
 ```
-uvicorn server:app
+uv run uvicorn mcp_server:app --host 127.0.0.1 --port 8080 --reload
 ```
-- run the fastapi langraph app server
+
+- run rest api
 ```
-uvicorn server:app --host 127.0.0.1 --port 8080 --reload
+uv run uvicorn main:app --host 127.0.0.1 --port 8080 --reload
 ```
+
 - run the ui
 ```
 uv run streamlit run ui.py
 ```
+---
+
+- run the fastapi langraph app server
+```
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+
 - run phoenix
 ```
 phoenix serve
-python -m phoenix.server.main
 ```

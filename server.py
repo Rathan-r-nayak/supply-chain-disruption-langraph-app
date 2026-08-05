@@ -64,7 +64,7 @@ logger.info("✅ LangChain Instrumentor active. Traces will appear in Phoenix.")
 # =============================================================================
 mcp_session = None
 mcp_tools = []
-MCP_SERVER_URL = "http://localhost:8000/mcp/sse"
+MCP_SERVER_URL = "http://localhost:8090/sse"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -279,8 +279,9 @@ async def chat_stream(
                 if action == "approve":
                     inputs = None
                 elif action == "reject":
-                    cancellation_msg = "Transaction cancelled by user."
-                    yield f"data: {cancellation_msg}\n\n"
+                    cancellation_msg = "❌ Action cancelled by user. The request has been aborted."
+                    # 🌟 FIX: Added 'event: message' so Streamlit displays it in the chat
+                    yield f"event: message\ndata: {cancellation_msg}\n\n"
                     return
                 else:
                     inputs = {
@@ -346,9 +347,14 @@ async def chat_stream(
                     ).start()
                     
         except Exception as e:
-            logger.error("❌ Stream Exception caught!")
+            logger.error(f"❌ Stream Exception caught: {e}")
             traceback.print_exc()
-            yield f"event: error\ndata: An internal error occurred.\n\n"
+            
+            # 🌟 FIX: Send the error as a standard chat message so the UI renders it
+            fallback_msg = "❌ **System Error:** The application encountered a critical failure (likely an API rate limit or disconnection). Please try again later."
+            
+            # Use 'event: message' instead of 'event: error'
+            yield f"event: message\ndata: {fallback_msg}\n\n"
             
         finally:
             if image_path and os.path.exists(image_path):

@@ -40,13 +40,14 @@ Rules:
 """
 
 def triage_router(state: SupplyChainState, config: RunnableConfig):
+    logger.info("--- 🚦 RUNNING PRIMARY CLASSIFIER (TRIAGE ROUTER) ---")
     question = state.get("question", "")
     memories = state.get("memories", "No known facts.")
     
     # Extract the user/driver ID passed from server.py config
     user_id = config.get("configurable", {}).get("user_id", "Unknown")
     
-    logger.info(f"🗣️ USER REQ : {question} | User ID: {user_id}")
+    logger.info(f"🗣️ USER REQ : '{question}' | User ID: '{user_id}'")
 
     # 🌟 CRITICAL FIX: Reset the loop_count to 0 for every new user message
     base_state_update = {
@@ -62,6 +63,7 @@ def triage_router(state: SupplyChainState, config: RunnableConfig):
     }
 
     if not question:
+        logger.info("ℹ️ Empty question received. Returning default greeting response.")
         return {
             **base_state_update,
             "requires_workflow": False,
@@ -105,11 +107,13 @@ def triage_router(state: SupplyChainState, config: RunnableConfig):
         decision = TriageDecision.model_validate(data)
 
         if decision.is_workflow_required:
+            logger.info("➡️ Triage Decision: Workflow REQUIRED (routing to Orchestrator).")
             return {
                 **base_state_update,
                 "requires_workflow": True,
             }
 
+        logger.info(f"🛑 Triage Decision: Direct response generated (bypassing workflow): '{decision.direct_response[:80]}...'")
         return {
             **base_state_update,
             "requires_workflow": False,
@@ -118,7 +122,7 @@ def triage_router(state: SupplyChainState, config: RunnableConfig):
         }
 
     except Exception as e:
-        logger.error(f"❌ Primary classifier parsing/validation failed: {e}")
+        logger.error(f"❌ Primary classifier parsing/validation failed: {e}. Falling back to workflow = True.")
         return {
             **base_state_update,
             "requires_workflow": True,

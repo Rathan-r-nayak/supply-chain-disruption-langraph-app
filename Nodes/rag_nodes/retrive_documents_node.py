@@ -16,23 +16,32 @@ def retrieve_node(state: RagState):
     if not question and state.get("messages"):
         question = state["messages"][-1].content.strip()
         
-    logger.info(f"user query: {question}")
+    logger.info(f"📥 Query for Hybrid Retrieval: '{question}'")
 
     # 1. Vector Search
-    store = get_vector_store()
-    hits = store.similarity_search(question, k=5)
-    
-    vector_chunks: List[VectorFact] = [
-        {
-            "content": doc.page_content,
-            "source": doc.metadata.get("source", "unknown"),
-            "score": float(score),
-        }
-        for doc, score in hits
-    ]
+    try:
+        store = get_vector_store()
+        hits = store.similarity_search(question, k=5)
+        vector_chunks: List[VectorFact] = [
+            {
+                "content": doc.page_content,
+                "source": doc.metadata.get("source", "unknown"),
+                "score": float(score),
+            }
+            for doc, score in hits
+        ]
+        logger.info(f"🔍 Vector Search returned {len(vector_chunks)} hit(s).")
+    except Exception as e:
+        logger.error(f"❌ Vector Search failed: {e}")
+        vector_chunks = []
 
     # 2. Graph Search
-    graph_facts = graph_search(question)
+    try:
+        graph_facts = graph_search(question)
+        logger.info(f"🕸️ Graph Search returned {len(graph_facts)} fact(s).")
+    except Exception as e:
+        logger.error(f"❌ Graph Search failed: {e}")
+        graph_facts = []
 
     # 3. Construct Hybrid Context
     document: HybridDocuments = {
@@ -40,6 +49,6 @@ def retrieve_node(state: RagState):
         "graph_facts_used": graph_facts,
     }
     
-    logger.info(f"✅ Hybrid context retrieved: {len(vector_chunks)} vector chunks, {len(graph_facts)} graph facts.")
+    logger.info(f"✅ Hybrid context assembled: {len(vector_chunks)} vector chunk(s), {len(graph_facts)} graph fact(s).")
 
     return {"documents": document}

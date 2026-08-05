@@ -200,16 +200,17 @@ nano_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
 
 synthesis_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
 
-fast_llm = ChatOpenAI(
-    openai_api_key=openrouter_key,
-    openai_api_base="https://openrouter.ai/api/v1",
-    model="openrouter/free", 
-    temperature=0.1,
-    default_headers={
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "Smart Helpdesk Triage App"
-    }
-)
+# fast_llm = ChatOpenAI(
+#     openai_api_key=openrouter_key,
+#     openai_api_base="https://openrouter.ai/api/v1",
+#     model="openrouter/free", 
+#     temperature=0.1,
+#     default_headers={
+#         "HTTP-Referer": "http://localhost:3000",
+#         "X-Title": "Smart Helpdesk Triage App"
+#     }
+# )
+fast_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
 
 # reasoning_llm = ChatOpenAI(
 #     model="gemma2:2b",

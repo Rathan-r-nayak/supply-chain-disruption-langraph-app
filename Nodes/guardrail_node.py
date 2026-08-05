@@ -30,6 +30,7 @@ def guardrail_node(state: SupplyChainState):
     if safe_question != question:
         logger.info("🛡️ PII Masked: Sensitive data scrubbed from input.")
         
+    logger.info("✅ Security guardrail passed.")
     # Proceed to triage with the sanitized question
     return {
         "question": safe_question,

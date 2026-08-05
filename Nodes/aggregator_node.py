@@ -17,6 +17,9 @@ logger = get_logger("AGGREGATOR")
 # ==========================================
 # 2. SYSTEM PROMPT WITH JSON INSTRUCTIONS
 # ==========================================
+# ==========================================
+# 2. SYSTEM PROMPT WITH JSON INSTRUCTIONS
+# ==========================================
 AGGREGATOR_SYSTEM_PROMPT = """You are the final response generator for a Supply Chain and Logistics Assistant.
 Your system has completed several internal tasks to gather information for the user.
 
@@ -43,42 +46,64 @@ OUTPUT FORMAT (STRICT JSON REQUIRED):
 You MUST output your response as a valid JSON object. Do not include any conversational text before or after the JSON.
 
 Required JSON Schema Example:
-{
+{{
   "final_answer": "The delivery to Mumbai is delayed by 45 minutes [Source: Logistics DB].",
   "is_chartable": true,
-  "chart_payload": {
+  "chart_payload": {{
     "chart_type": "bar",
     "title": "Delivery Delays (Minutes)",
     "labels": ["Mumbai"],
     "datasets": [
-      {
+      {{
         "label": "Delay",
         "data": [45]
-      }
+      }}
     ]
-  }
-}
+  }}
+}}
 """
 
 
 def aggregator_node(state: SupplyChainState):
+    logger.info("--- 📊 RUNNING AGGREGATOR NODE ---")
     question = state.get("question", "")
     worker_responses_list = state.get("worker_responses", [])
     state_messages = state.get("messages", [])
     
+    # 🌟 FIX: Check if the Orchestrator already provided a direct answer
+    existing_generation = state.get("generation", "")
+    
     if not worker_responses_list:
-        logger.warning("⚠️ No worker responses found. Returning default error to user.")
-        error_msg = "I'm sorry, but I was unable to retrieve the requested information at this time."
-        
-        if state.get("loop_count", 0) >= 3:
-            error_msg += " (System Request Timeout)"
+        # If Orchestrator bypassed workers but gave a valid explanation (e.g., "I don't have that tool")
+        if existing_generation:
+            logger.info("ℹ️ Orchestrator provided a direct answer. Bypassing synthesis.")
             
-        logger.info(f"📤 [AGGREGATOR OUTPUT] -> {error_msg}")
-        return {
-            "generation": error_msg,
-            "messages": [AIMessage(content=error_msg)]
-        }
+            # Optionally add the NBA and confidence score to the Orchestrator's direct answer
+            nba_list = generate_next_best_actions(user_query=question, final_response=existing_generation)
+            if nba_list:
+                existing_generation += "\n\n**💡 Suggested Next Actions:**\n" + "\n".join([f"- {action}" for action in nba_list])
+                
+            return {
+                "generation": existing_generation,
+                "next_best_actions": nba_list,
+                "messages": [AIMessage(content=existing_generation)]
+            }
+            
+        # Only throw the generic error if BOTH workers failed AND Orchestrator gave no explanation
+        else:
+            logger.warning("⚠️ No worker responses found. Returning default error to user.")
+            error_msg = "I'm sorry, but I was unable to retrieve the requested information at this time."
+            
+            if state.get("loop_count", 0) >= 3:
+                error_msg += " (System Request Timeout)"
+                
+            logger.info(f"📤 [AGGREGATOR OUTPUT] -> {error_msg}")
+            return {
+                "generation": error_msg,
+                "messages": [AIMessage(content=error_msg)]
+            }
 
+        
     combined_worker_data = "\n\n".join(worker_responses_list)
     logger.info(f"📥 [AGGREGATOR INPUT] Aggregating {len(worker_responses_list)} worker result(s).")
     

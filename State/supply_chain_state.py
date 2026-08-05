@@ -4,17 +4,15 @@ from typing import Annotated, Literal, Optional, Sequence, TypedDict
 from langgraph.graph import add_messages
 from langgraph.store.memory import InMemoryStore
 from langchain_core.messages import BaseMessage
+from pydantic import Field
+
+from Schema.task_schema import Task
 
 def merge_lists(left: list | None, right: list | None) -> list:
     if right == []:
         return []
     return (left or []) + (right or [])
 
-class Task(TypedDict):
-    task_id: str
-    description: str
-    assigned_worker: str
-    tool_type: Literal["safe", "sensitive", "rag"]
 
 class SupplyChainState(TypedDict, total=False):
     question: str

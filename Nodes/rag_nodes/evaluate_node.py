@@ -28,6 +28,7 @@ def evaluate_node(state: RagState):
     graph_facts = documents.get("graph_facts_used", []) if isinstance(documents, dict) else []
     
     if not vector_facts:
+        logger.info("ℹ️ No vector facts found to grade. Setting relevance_score = 'no'.")
         return {"relevance_score": "no", "documents": documents}
 
     # 1. Format Graph facts into a single string to guide the LLM
@@ -55,17 +56,16 @@ def evaluate_node(state: RagState):
         # Keep only the vector chunks the LLM approved
         filtered_vector_facts = [vector_facts[i] for i in approved_indices if i < len(vector_facts)]
         
-        logger.info(f"✅ Approved {len(filtered_vector_facts)} out of {len(vector_facts)} chunks using Graph Guidance.")
+        logger.info(f"✅ Approved {len(filtered_vector_facts)} out of {len(vector_facts)} vector chunk(s) using Graph Guidance.")
 
         filtered_documents = {
             "vector_facts": filtered_vector_facts,
             "graph_facts_used": graph_facts # We keep all graph facts and pass them to the generator
         }
 
-        if len(filtered_vector_facts) > 0 or len(graph_facts) > 0:
-            return {"documents": filtered_documents, "relevance_score": "yes"}
-        else:
-            return {"documents": filtered_documents, "relevance_score": "no"}
+        relevance_score = "yes" if (len(filtered_vector_facts) > 0 or len(graph_facts) > 0) else "no"
+        logger.info(f"📊 Final Relevance Score: '{relevance_score.upper()}'")
+        return {"documents": filtered_documents, "relevance_score": relevance_score}
             
     except Exception as e:
         logger.error(f"⚠️ Batch evaluation failed, keeping all chunks: {e}")

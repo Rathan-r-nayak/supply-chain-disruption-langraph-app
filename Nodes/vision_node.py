@@ -12,6 +12,7 @@ def analyze_image_context(image_path: str) -> str:
     try:
         mime_type, _ = mimetypes.guess_type(image_path)
         mime_type = mime_type or "image/jpeg"
+        logger.info(f"🔍 Processing image file '{image_path}' (MIME type: {mime_type})...")
 
         with open(image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
@@ -36,10 +37,11 @@ def analyze_image_context(image_path: str) -> str:
         )
         
         response = vision_llm.invoke([message])
+        logger.info("✅ Vision LLM successfully analyzed image context.")
         return response.content
         
     except Exception as e:
-        logger.error(f"Vision Error: {e}")
+        logger.error(f"❌ Vision Analysis Error: {e}")
         return "System failed to analyze the attached image."
 
 def vision_node(state: SupplyChainState):
@@ -50,8 +52,11 @@ def vision_node(state: SupplyChainState):
     image_path = state.get("image_path")
 
     if not image_path:
+        logger.info("ℹ️ No image attached in state. Skipping vision analysis.")
         return {}
 
+    logger.info(f"📸 Image path detected: '{image_path}'. Analyzing visual contents...")
     image_context = analyze_image_context(image_path)
     enriched_question = f"{question}\n\n--- ATTACHED IMAGE CONTEXT ---\n{image_context}"
+    logger.info("✅ Appended image context to user query.")
     return {"question": enriched_question}

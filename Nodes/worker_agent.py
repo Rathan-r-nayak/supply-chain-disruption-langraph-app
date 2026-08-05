@@ -1,4 +1,5 @@
 from typing import Any
+from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -65,16 +66,8 @@ def get_worker_agent_node(all_mcp_tools: list[Any]):
         # )
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
-        fresh_llm = ChatOpenAI(
-            openai_api_key=openrouter_key,
-            openai_api_base="https://openrouter.ai/api/v1",
-            model="openrouter/free", 
-            temperature=0.1,
-            default_headers={
-                "HTTP-Referer": "http://localhost:3000",
-                "X-Title": "Smart Helpdesk Triage App"
-            }
-        )
+        fresh_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.2)
+
         
         llm_with_tools = fresh_llm.bind_tools(all_tools, parallel_tool_calls=False)
         
